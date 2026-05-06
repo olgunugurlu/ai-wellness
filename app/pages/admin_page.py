@@ -123,6 +123,7 @@ def show(current_user):
 
     # ── TAKVİYE YÖNETİMİ ──
     with tab3:
+
         from config.supplement_db import (
             get_all_supplements, add_supplement,
             update_supplement, delete_supplement, get_categories
@@ -219,3 +220,112 @@ def show(current_user):
                             delete_supplement(sup["id"])
                             st.warning("Silindi.")
                             st.rerun()
+
+# ── AI İLE ÜRÜN BUL ──────────────────────────────
+        with st.expander("🤖 AI ile Ürün Ara & Ekle", expanded=False):
+            st.caption("Kategori ve kriterleri gir, AI piyasadaki gerçek ürünleri önersin.")
+
+            with st.form("ai_supplement_search"):
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    ai_category = st.text_input("Kategori", "Omega-3", key="ai_cat")
+                    ai_budget   = st.number_input("Maks Fiyat (₺)", 0, 2000, 500, key="ai_budget")
+                with col2:
+                    ai_criteria = st.text_area(
+                        "Kriterler",
+                        "Yüksek emilimli, iyi marka, Türkiye'de bulunabilir",
+                        height=80, key="ai_criteria"
+                    )
+                with col3:
+                    ai_count = st.number_input("Kaç ürün önerilsin?", 2, 10, 5, key="ai_count")
+
+                search_btn = st.form_submit_button("🔍 AI ile Ara", use_container_width=True)
+
+            if search_btn:
+                with st.spinner("AI ürünleri araştırıyor..."):
+                    import anthropic, json
+                    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+
+                    prompt = f"""
+Sen bir takviye ürün uzmanısın. Türkiye pazarında gerçekten bulunan ve satın alınabilen ürünleri öner.
+Sadece JSON döndür, başka hiçbir şey yazma.
+
+Kategori: {ai_category}
+Kriterler: {ai_criteria}
+Maks Fiyat: {ai_budget} TL
+Ürün Sayısı: {ai_count}
+
+Şu JSON formatında yanıt ver:
+{{
+  "urunler": [
+    {{
+      "marka": "Solgar",
+      "urun_adi": "Omega-3 950mg EPA & DHA",
+      "doz_mg": 950,
+      "doz_birimi": "mg",
+      "form": "Softgel",
+      "fiyat_tl": 485,
+      "porsiyon_sayisi": 120,
+      "neden_onerildi": "Yüksek EPA/DHA oranı, iyi emilim"
+    }}
+  ]
+}}
+
+Form değerleri yalnızca şunlardan biri olabilir: Kapsül, Tablet, Softgel, Toz, Sıvı, Pastil
+Fiyatlar Türkiye piyasasına yakın gerçekçi olsun.
+"""
+                    try:
+                        msg = client.messages.create(
+                            model="claude-sonnet-4-5",
+                            max_tokens=2000,
+                            messages=[{"role": "user", "content": prompt}]
+                        )
+                        raw = msg.content[0].text.strip()
+                        if "```" in raw:
+                            raw = raw.split("```")[1]
+                            if raw.startswith("json"):
+                                raw = raw[4:]
+                        ai_results = json.loads(raw.strip())
+                        st.session_state.ai_sup_results = ai_results.get("urunler", [])
+                        st.session_state.ai_sup_category = ai_category
+                    except Exception as e:
+                        st.error(f"AI hatası: {e}")
+
+            # AI sonuçlarını göster
+            if st.session_state.get("ai_sup_results"):
+                st.divider()
+                st.markdown(f"**🤖 AI {len(st.session_state.ai_sup_results)} ürün önerdi — eklemek istediklerini seç:**")
+
+                for idx, prod in enumerate(st.session_state.ai_sup_results):
+                    with st.container(border=True):
+                        col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+                        with col1:
+                            st.markdown(f"**{prod.get('marka','')}** — {prod.get('urun_adi','')}")
+                            st.caption(prod.get("neden_onerildi", ""))
+                        with col2:
+                            st.markdown(f"💊 {prod.get('doz_mg',0)} {prod.get('doz_birimi','')}")
+                            st.markdown(f"📦 {prod.get('porsiyon_sayisi',0)} porsiyon")
+                        with col3:
+                            st.markdown(f"💰 **{prod.get('fiyat_tl',0)} ₺**")
+                            if prod.get("porsiyon_sayisi") and prod.get("fiyat_tl"):
+                                pps = round(prod["fiyat_tl"] / prod["porsiyon_sayisi"], 2)
+                                st.caption(f"Porsiyon başı: {pps} ₺")
+                        with col4:
+                            if st.button("➕ Ekle", key=f"ai_add_{idx}", use_container_width=True):
+                                from config.supplement_db import add_supplement
+                                add_supplement({
+                                    "category": st.session_state.get("ai_sup_category", prod.get("marka","")),
+                                    "brand":    prod.get("marka", ""),
+                                    "name":     prod.get("urun_adi", ""),
+                                    "dose_mg":  prod.get("doz_mg", 0),
+                                    "dose_unit":prod.get("doz_birimi", "mg"),
+                                    "form":     prod.get("form", "Kapsül"),
+                                    "price_try":prod.get("fiyat_tl", 0),
+                                    "serving_count": prod.get("porsiyon_sayisi", 0),
+                                    "is_active": True
+                                })
+                                st.success(f"✅ {prod.get('urun_adi','')} eklendi!")
+                                st.rerun()
+
+
+
