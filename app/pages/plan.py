@@ -6,12 +6,35 @@ from config.user_data import (
     get_user_nutrition, get_user_performance
 )
 from config.database import get_connection
-from config.user_data import save_scores
 from core.analysis.rule_engine import run_rules
 from core.analysis.scorer import calculate_scores
 from core.planning.plan_generator import generate_plan
 
 PREFIX = "ai_wellness_"
+
+def save_scores(user_id, scores):
+    conn = get_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            INSERT INTO {PREFIX}scores
+                (user_id, metabolic_score, cardio_score, msk_score,
+                 nutrition_score, mental_score, performance_score, overall_score)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            user_id,
+            scores["metabolic"], scores["cardio"], scores["msk"],
+            scores["nutrition"], scores["mental"], scores["performance"],
+            scores["overall"]
+        ))
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
 
 def save_plan(user_id, plan):
     conn = get_connection()
