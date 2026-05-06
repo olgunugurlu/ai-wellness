@@ -1,98 +1,103 @@
 from mysql.connector import Error
-
 from config.database import get_connection
 
 PREFIX = "ai_wellness_"
 
-def get_user_profile(user_id):
+def _exec_fetch_one(query, params=()):
     conn = get_connection()
     if not conn:
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute(f"SELECT * FROM {PREFIX}profiles WHERE user_id = %s", (user_id,))
+        cursor.execute(query, params)
         return cursor.fetchone()
-    except Error as e:
+    except Error:
         return None
     finally:
-        conn.close()  # Her durumda kapat
+        conn.close()
+
+def _exec_fetch_all(query, params=()):
+    conn = get_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(query, params)
+        return cursor.fetchall()
+    except Error:
+        return []
+    finally:
+        conn.close()
+
+def _exec_write(query, params=()):
+    conn = get_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        conn.commit()
+    except Error:
+        pass
+    finally:
+        conn.close()
+
+# ─── GET FONKSİYONLARI ───────────────────────────────────
+
+def get_user_profile(user_id):
+    return _exec_fetch_one(
+        f"SELECT * FROM {PREFIX}profiles WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_health(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}health WHERE user_id = %s", (user_id,))
-    data = cursor.fetchone()
-    conn.close()
-    return data
+    return _exec_fetch_one(
+        f"SELECT * FROM {PREFIX}health WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_diseases(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}diseases WHERE user_id = %s", (user_id,))
-    data = cursor.fetchall()
-    conn.close()
-    return data
+    return _exec_fetch_all(
+        f"SELECT * FROM {PREFIX}diseases WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_pain_map(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}pain_map WHERE user_id = %s", (user_id,))
-    data = cursor.fetchall()
-    conn.close()
-    return data
+    return _exec_fetch_all(
+        f"SELECT * FROM {PREFIX}pain_map WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_lifestyle(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}lifestyle WHERE user_id = %s", (user_id,))
-    data = cursor.fetchone()
-    conn.close()
-    return data
+    return _exec_fetch_one(
+        f"SELECT * FROM {PREFIX}lifestyle WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_nutrition(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}nutrition WHERE user_id = %s", (user_id,))
-    data = cursor.fetchone()
-    conn.close()
-    return data
+    return _exec_fetch_one(
+        f"SELECT * FROM {PREFIX}nutrition WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_food_restrictions(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}food_restrictions WHERE user_id = %s", (user_id,))
-    data = cursor.fetchall()
-    conn.close()
-    return data
+    return _exec_fetch_all(
+        f"SELECT * FROM {PREFIX}food_restrictions WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_performance(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}performance WHERE user_id = %s", (user_id,))
-    data = cursor.fetchone()
-    conn.close()
-    return data
+    return _exec_fetch_one(
+        f"SELECT * FROM {PREFIX}performance WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_medications(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}medications WHERE user_id = %s", (user_id,))
-    data = cursor.fetchall()
-    conn.close()
-    return data
+    return _exec_fetch_all(
+        f"SELECT * FROM {PREFIX}medications WHERE user_id = %s", (user_id,)
+    )
 
 def get_user_supplements(user_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}current_supplements WHERE user_id = %s", (user_id,))
-    data = cursor.fetchall()
-    conn.close()
-    return data
+    return _exec_fetch_all(
+        f"SELECT * FROM {PREFIX}current_supplements WHERE user_id = %s", (user_id,)
+    )
+
+# ─── UPDATE FONKSİYONLARI ────────────────────────────────
 
 def update_profile(user_id, data):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"""
+    _exec_write(f"""
         UPDATE {PREFIX}profiles SET
             age=%s, gender=%s, height_cm=%s, weight_kg=%s,
             waist_cm=%s, hip_cm=%s, body_fat_pct=%s, muscle_mass_kg=%s,
@@ -104,13 +109,9 @@ def update_profile(user_id, data):
         data["resting_hr"], data["activity_level"], data["occupation_type"], data["city"],
         user_id
     ))
-    conn.commit()
-    conn.close()
 
 def update_health(user_id, data):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"""
+    _exec_write(f"""
         UPDATE {PREFIX}health SET
             energy_morning=%s, energy_afternoon=%s, sleep_quality=%s,
             sleep_duration_hrs=%s, sleep_onset_min=%s, focus_score=%s,
@@ -137,13 +138,9 @@ def update_health(user_id, data):
         data["alcohol_frequency"], data["smoking_status"], data["caffeine_per_day"],
         user_id
     ))
-    conn.commit()
-    conn.close()
 
 def update_lifestyle(user_id, data):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"""
+    _exec_write(f"""
         UPDATE {PREFIX}lifestyle SET
             bedtime=%s, wake_time=%s, sleep_hrs=%s, sleep_onset_min=%s,
             night_wakings=%s, snoring=%s, screen_before_bed_hrs=%s,
@@ -167,13 +164,9 @@ def update_lifestyle(user_id, data):
         data["daily_steps"], data["sitting_hrs_day"], data["transport_type"],
         data["wearable_device"], user_id
     ))
-    conn.commit()
-    conn.close()
 
 def update_nutrition(user_id, data):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"""
+    _exec_write(f"""
         UPDATE {PREFIX}nutrition SET
             diet_type=%s, meals_per_day=%s, first_meal_time=%s, last_meal_time=%s,
             water_liters=%s, vegetable_portions=%s, whole_grain_freq=%s,
@@ -191,13 +184,9 @@ def update_nutrition(user_id, data):
         data["fastfood_per_week"], data["cooking_habit"], data["budget_level"],
         data["disliked_foods"], user_id
     ))
-    conn.commit()
-    conn.close()
 
 def update_performance(user_id, data):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"""
+    _exec_write(f"""
         UPDATE {PREFIX}performance SET
             training_experience_mo=%s, training_days_per_week=%s,
             training_location=%s, current_training_type=%s, session_duration_min=%s,
@@ -219,5 +208,3 @@ def update_performance(user_id, data):
         data.get("sit_reach_cm"), data["shoulder_flex"], data.get("ankle_dorsiflexion_cm"),
         user_id
     ))
-    conn.commit()
-    conn.close()
