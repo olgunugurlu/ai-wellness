@@ -198,13 +198,14 @@ def show_antrenman(ap):
         st.markdown("**💡 İpuçları**")
         for ipucu in ap["haftalik_ipuclari"]:
             st.info(f"→ {ipucu}")
-
 def show_supplement(sp):
     st.subheader("💊 Supplement Planı")
 
     if not sp:
         st.warning("Supplement planı bulunamadı.")
         return
+
+    from config.supplement_db import match_supplements
 
     sp_sorted = sorted(sp, key=lambda x: x.get("oncelik", 99))
     for i, sup in enumerate(sp_sorted):
@@ -217,6 +218,24 @@ def show_supplement(sp):
                 st.markdown(f"💊 **Doz:** {sup.get('doz', '')}")
             with col3:
                 st.markdown(f"⏰ **Zamanlama:** {sup.get('zamanlama', '')}")
+
+            # Ürün eşleştirme
+            matched = match_supplements(sup.get("ad", ""))
+            if matched:
+                st.markdown("**🛍 Önerilen Ürünler:**")
+                prod_cols = st.columns(len(matched))
+                for j, prod in enumerate(matched):
+                    with prod_cols[j]:
+                        with st.container(border=True):
+                            st.markdown(f"**{prod['brand']}**")
+                            st.caption(f"{prod['name']}")
+                            st.markdown(f"💊 {prod['dose_mg']} {prod['dose_unit']}")
+                            st.markdown(f"📦 {prod['serving_count']} porsiyon")
+                            st.markdown(f"💰 **{prod['price_try']} ₺**")
+                            if prod.get("price_per_serving"):
+                                st.caption(f"Porsiyon başı: {prod['price_per_serving']} ₺")
+            else:
+                st.caption("Bu takviye için ürün veritabanında eşleşme bulunamadı.")
 
 def show_yasam(yasam):
     st.subheader("🌿 Yaşam Tarzı Önerileri")
