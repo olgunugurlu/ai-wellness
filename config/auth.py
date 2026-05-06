@@ -24,7 +24,7 @@ def create_token(user_id: int, email: str, role: str) -> str:
         "user_id": user_id,
         "email": email,
         "role": role,
-        "exp": datetime.utcnow() + timedelta(hours=TOKEN_EXPIRE_HOURS)
+        "exp": datetime.now() + timedelta(hours=TOKEN_EXPIRE_HOURS)
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
