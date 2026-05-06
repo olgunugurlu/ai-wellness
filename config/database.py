@@ -12,7 +12,7 @@ def get_pool():
     if _pool is None:
         _pool = pooling.MySQLConnectionPool(
             pool_name="ai_wellness_pool",
-            pool_size=3,
+            pool_size=5,
             pool_reset_session=True,
             host=st.secrets["mysql"]["host"],
             database=st.secrets["mysql"]["database"],
