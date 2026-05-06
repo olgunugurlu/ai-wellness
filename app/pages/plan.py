@@ -5,7 +5,8 @@ from config.user_data import (
     get_user_profile, get_user_health, get_user_lifestyle,
     get_user_nutrition, get_user_performance
 )
-from config.database import get_connection, save_scores
+from config.database import get_connection
+from config.user_data import save_scores
 from core.analysis.rule_engine import run_rules
 from core.analysis.scorer import calculate_scores
 from core.planning.plan_generator import generate_plan

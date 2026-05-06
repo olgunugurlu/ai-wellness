@@ -29,3 +29,27 @@ def get_connection():
     except Error as e:
         st.error(f"Veritabanı bağlantı hatası: {e}")
         return None
+    
+
+def save_scores(user_id, scores):
+    conn = get_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            INSERT INTO ai_wellness_scores
+                (user_id, metabolic_score, cardio_score, msk_score,
+                 nutrition_score, mental_score, performance_score, overall_score)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            user_id,
+            scores["metabolic"], scores["cardio"], scores["msk"],
+            scores["nutrition"], scores["mental"], scores["performance"],
+            scores["overall"]
+        ))
+        conn.commit()
+    except Exception as e:
+        pass
+    finally:
+        conn.close()
