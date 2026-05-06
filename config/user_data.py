@@ -1,14 +1,21 @@
+from mysql.connector import Error
+
 from config.database import get_connection
 
 PREFIX = "ai_wellness_"
 
 def get_user_profile(user_id):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM {PREFIX}profiles WHERE user_id = %s", (user_id,))
-    data = cursor.fetchone()
-    conn.close()
-    return data
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(f"SELECT * FROM {PREFIX}profiles WHERE user_id = %s", (user_id,))
+        return cursor.fetchone()
+    except Error as e:
+        return None
+    finally:
+        conn.close()  # Her durumda kapat
 
 def get_user_health(user_id):
     conn = get_connection()
